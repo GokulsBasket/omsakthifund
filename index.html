@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tour Fund Manager (Cloud)</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <style>
+        /* (Keeping the exact same Pro design styles as before) */
+        :root {
+            --primary: #6366f1; --primary-dark: #4f46e5; --secondary: #10b981;
+            --danger: #ef4444; --warning: #f59e0b; --dark: #1e1b4b;
+            --bg: #f3f4f6; --text: #1f2937; --sidebar-width: 250px;
+        }
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+
+        .sidebar { width: var(--sidebar-width); background: var(--dark); color: white; display: flex; flex-direction: column; padding: 20px; z-index: 10; }
+        .brand { font-size: 1.5rem; font-weight: 700; margin-bottom: 30px; color: #818cf8; display: flex; align-items: center; gap: 10px; }
+        .menu-item { padding: 15px; cursor: pointer; border-radius: 12px; margin-bottom: 5px; display: flex; align-items: center; gap: 15px; font-weight: 500; color: #a5b4fc; transition: 0.2s; }
+        .menu-item:hover, .menu-item.active { background: var(--primary); color: white; }
+
+        .main-content { flex: 1; padding: 20px; overflow-y: auto; padding-bottom: 80px; }
+        .page { display: none; opacity: 0; animation: fadeIn 0.4s forwards; }
+        .page.active { display: block; }
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        .card { background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h2 { margin-top: 0; font-size: 1.2rem; color: var(--dark); border-bottom: 2px solid #f3f4f6; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+        .table-wrapper { overflow-x: auto; border-radius: 8px; border: 1px solid #f3f4f6; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; font-size: 0.9rem; }
+        th, td { padding: 14px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+        th { background: #f8fafc; color: #64748b; font-weight: 600; text-transform: uppercase; }
+        .badge-month { background: #e0e7ff; color: var(--primary-dark); padding: 4px 10px; border-radius: 20px; font-weight: 600; font-size: 0.8rem; }
+        .amount-text { font-weight: 600; color: var(--secondary); font-size: 1rem; }
+
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; align-items: end; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 0.95rem; background: #fff; }
+        button { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; color: white; width: 100%; }
+        .btn-primary { background: var(--primary); }
+        .btn-print { background: #374151; width: auto; padding: 8px 20px; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+        .btn-whatsapp-all { background: #25D366; width: auto; padding: 8px 20px; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; margin-left: 10px; color: white; border: none; border-radius: 8px; cursor: pointer; text-decoration: none; }
+
+        .action-box { display: flex; gap: 8px; }
+        .btn-icon { width: 34px; height: 34px; border-radius: 8px; border: none; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; }
+        .btn-edit { background: var(--warning); }
+        .btn-del { background: var(--danger); }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        .modal.open { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; animation: popIn 0.3s; }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* LOADING SPINNER */
+        #loader { position: fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction:column; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        @media print {
+            body { background: white; height: auto; display: block; }
+            .sidebar, .form-row, .btn-primary, .btn-print, .btn-whatsapp-all, .action-box, #dashboard, #members, #deposits, #loans { display: none !important; }
+            #reports { display: block !important; opacity: 1 !important; }
+            .main-content { padding: 0; }
+            .card { box-shadow: none; padding: 0; border: none; }
+            table { border: 1px solid #000; width: 100%; }
+            th, td { border: 1px solid #000; color: black; padding: 5px; }
+            @page { size: landscape; margin: 0.5cm; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; bottom: 0; left: 0; width: 100%; height: 65px; flex-direction: row; justify-content: space-around; padding: 0; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+            .brand, .menu-item span { display: none; }
+            .menu-item i { font-size: 1.4rem; }
+            .main-content { padding-bottom: 80px; }
+            .btn-whatsapp-all span { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <div>Connecting to Cloud...</div>
+    </div>
+
+    <div class="sidebar">
+        <div class="brand"><i class="fas fa-route"></i> TourFund</div>
+        <div class="menu-item active" onclick="nav('dashboard')"><i class="fas fa-home"></i> <span>Home</span></div>
+        <div class="menu-item" onclick="nav('reports')"><i class="fas fa-file-invoice"></i> <span>Reports</span></div>
+        <div class="menu-item" onclick="nav('members')"><i class="fas fa-users"></i> <span>Members</span></div>
+        <div class="menu-item" onclick="nav('deposits')"><i class="fas fa-wallet"></i> <span>Saved</span></div>
+        <div class="menu-item" onclick="nav('loans')"><i class="fas fa-hand-holding-dollar"></i> <span>Loans</span></div>
+    </div>
+
+    <div class="main-content">
+        
+        <div id="dashboard" class="page active">
+            <h2>
+                Dashboard
+                <button class="btn-whatsapp-all" onclick="shareGroupReport()">
+                    <i class="fab fa-whatsapp"></i> <span>Share Group Report</span>
+                </button>
+            </h2>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:15px; margin-bottom:20px;">
+                <div class="card" style="margin:0; text-align:center;"><h3>Total Savings</h3><div id="dash-fund" style="font-size:1.8rem; color:var(--secondary); font-weight:bold;">...</div></div>
+                <div class="card" style="margin:0; text-align:center;"><h3>Active Loans</h3><div id="dash-loans" style="font-size:1.8rem; color:var(--danger); font-weight:bold;">...</div></div>
+            </div>
+            <div class="card">
+                <h3>⚠️ Monthly Interest Dues (10%)</h3>
+                <div class="table-wrapper">
+                    <table><thead><tr><th>Member</th><th>Loan Bal</th><th>Interest</th><th>Notify</th></tr></thead><tbody id="table-interest"></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <div id="reports" class="page">
+            <div class="card">
+                <h2>Monthly Sheet <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print</button></h2>
+                <div class="table-wrapper">
+                    <table id="matrix-table"><thead id="matrix-head"></thead><tbody id="matrix-body"></tbody><tfoot id="matrix-foot" style="background:#f9fafb; font-weight:bold;"></tfoot></table>
+                </div>
+            </div>
+        </div>
+
+        <div id="members" class="page">
+            <div class="card">
+                <h2>Add Member</h2>
+                <div class="form-row">
+                    <input type="text" id="m-name" placeholder="Full Name">
+                    <input type="tel" id="m-phone" placeholder="WhatsApp Number">
+                    <input type="text" id="m-address" placeholder="Address">
+                    <button class="btn-primary" onclick="addMember()">+ Add</button>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Member Directory</h2>
+                <div class="table-wrapper">
+                    <table><thead><tr><th>Name</th><th>Phone</th><th>Address</th><th>Actions</th></tr></thead><tbody id="table-members"></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <div id="deposits" class="page">
+            <div class="card">
+                <h2>Record Payment</h2>
+                <div class="form-row">
+                    <select id="dep-member"><option>Loading...</option></select>
+                    <select id="dep-month">
+                        <option value="Jan">Jan</option><option value="Feb">Feb</option><option value="Mar">Mar</option>
+                        <option value="Apr">Apr</option><option value="May">May</option><option value="Jun">Jun</option>
+                        <option value="Jul">Jul</option><option value="Aug">Aug</option><option value="Sep">Sep</option>
+                        <option value="Oct">Oct</option><option value="Nov">Nov</option><option value="Dec">Dec</option>
+                    </select>
+                    <input type="number" id="dep-amount" placeholder="Amount">
+                    <button class="btn-primary" onclick="addDeposit()">Save Payment</button>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Last 20 Transactions</h2>
+                <div class="table-wrapper">
+                    <table><thead><tr><th>Member</th><th>Month</th><th>Amount</th><th>Actions</th></tr></thead><tbody id="table-deposits"></tbody></table>
+                </div>
+            </div>
+        </div>
+
+        <div id="loans" class="page">
+            <div class="card">
+                <h2>Loan Manager</h2>
+                <div class="form-row">
+                    <select id="loan-member"><option>Loading...</option></select>
+                    <select id="loan-type"><option value="take">Give Loan</option><option value="repay_principal">Repay Principal</option></select>
+                    <input type="number" id="loan-amount" placeholder="Amount">
+                    <button class="btn-primary" style="background:var(--danger)" onclick="updateLoan()">Update</button>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Loan Status</h2>
+                <div class="table-wrapper">
+                    <table><thead><tr><th>Member</th><th>Balance</th><th>Notify</th></tr></thead><tbody id="table-loans"></tbody></table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modal-title" style="margin-bottom:20px;">Edit</h2>
+            <div id="modal-body" style="display:flex; flex-direction:column; gap:15px;"></div>
+            <div class="form-row" style="margin-top:25px;">
+                <button style="background:#9ca3af;" onclick="closeModal()">Cancel</button>
+                <button class="btn-primary" id="btn-save-modal">Save</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // -----------------------------------------------------------------
+    //  1. FIREBASE CONFIGURATION (PASTE YOUR KEYS HERE)
+    // -----------------------------------------------------------------
+    const firebaseConfig = {
+  apiKey: "AIzaSyDucEzW2MZuGmq8vlq2gwfmx8D-oD2qrUw",
+  authDomain: "om-sakthi-fund.firebaseapp.com",
+  projectId: "om-sakthi-fund",
+  storageBucket: "om-sakthi-fund.firebasestorage.app",
+  messagingSenderId: "415312222977",
+  appId: "1:415312222977:web:43353fa2e8badc25205900"
+};
+
+    // 2. INITIALIZE FIREBASE
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // -----------------------------------------------------------------
+    //  3. STATE & NAVIGATION
+    // -----------------------------------------------------------------
+    let members = [];
+    let deposits = [];
+    let loans = [];
+    const monthList = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    function nav(id) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        const map = {'dashboard':0, 'reports':1, 'members':2, 'deposits':3, 'loans':4};
+        document.querySelectorAll('.menu-item')[map[id]].classList.add('active');
+        if(id === 'reports') renderReport();
+    }
+
+    function closeModal() { document.getElementById('editModal').classList.remove('open'); }
+    function isValidPhone(p) { return /^[0-9]{10,15}$/.test(p); }
+
+    // -----------------------------------------------------------------
+    //  4. DATA SYNC (REALTIME LISTENERS)
+    // -----------------------------------------------------------------
+    
+    // Listen for Members
+    db.ref('members').on('value', (snapshot) => {
+        members = [];
+        snapshot.forEach(child => { members.push({ id: child.key, ...child.val() }); });
+        renderAll();
+        // Hide loader once data is ready
+        document.getElementById('loader').style.display = 'none';
+    });
+
+    // Listen for Deposits
+    db.ref('deposits').on('value', (snapshot) => {
+        deposits = [];
+        snapshot.forEach(child => { deposits.push({ id: child.key, ...child.val() }); });
+        renderAll();
+    });
+
+    // Listen for Loans
+    db.ref('loans').on('value', (snapshot) => {
+        loans = [];
+        snapshot.forEach(child => { loans.push({ id: child.key, ...child.val() }); });
+        renderAll();
+    });
+
+    // -----------------------------------------------------------------
+    //  5. CRUD ACTIONS (WRITING TO FIREBASE)
+    // -----------------------------------------------------------------
+
+    // --- MEMBERS ---
+    function addMember() {
+        const name = document.getElementById('m-name').value;
+        const phone = document.getElementById('m-phone').value.trim();
+        const address = document.getElementById('m-address').value;
+        if(!name || !isValidPhone(phone)) return alert("Invalid Name or Phone");
+
+        // Generate a new key
+        const newMemberRef = db.ref('members').push();
+        const memberId = newMemberRef.key;
+
+        // Save Member
+        newMemberRef.set({ name, phone, address });
+        
+        // Initialize Loan Record (Using same ID as member for easy lookup)
+        db.ref('loans/' + memberId).set({ principal: 0, memberId: memberId });
+
+        document.getElementById('m-name').value = '';
+        document.getElementById('m-phone').value = '';
+        document.getElementById('m-address').value = '';
+    }
+
+    function deleteMember(id) {
+        if(confirm("Delete this member and ALL data?")) {
+            db.ref('members/' + id).remove();
+            db.ref('loans/' + id).remove();
+            // Delete associated deposits
+            deposits.filter(d => d.memberId === id).forEach(d => db.ref('deposits/' + d.id).remove());
+        }
+    }
+
+    function openEditMember(id) {
+        const m = members.find(x => x.id === id);
+        if(!m) return;
+        
+        const html = `
+            <label>Name</label><input type="text" id="edit-name" value="${m.name}">
+            <label>Phone</label><input type="tel" id="edit-phone" value="${m.phone}">
+            <label>Address</label><input type="text" id="edit-address" value="${m.address || ''}">
+        `;
+        document.getElementById('modal-title').innerText = "Edit Member";
+        document.getElementById('modal-body').innerHTML = html;
+        document.getElementById('btn-save-modal').onclick = function() {
+            const updates = {};
+            updates['members/' + id + '/name'] = document.getElementById('edit-name').value;
+            updates['members/' + id + '/phone'] = document.getElementById('edit-phone').value;
+            updates['members/' + id + '/address'] = document.getElementById('edit-address').value;
+            db.ref().update(updates);
+            closeModal();
+        };
+        document.getElementById('editModal').classList.add('open');
+    }
+
+    // --- DEPOSITS ---
+    function addDeposit() {
+        const mid = document.getElementById('dep-member').value; // ID is string in Firebase
+        const month = document.getElementById('dep-month').value;
+        const amt = parseFloat(document.getElementById('dep-amount').value);
+        if(!mid || !amt) return alert("Missing Info");
+
+        db.ref('deposits').push({ memberId: mid, month, amount: amt, timestamp: Date.now() });
+    }
+
+    function deleteDeposit(id) {
+        if(confirm("Delete Transaction?")) db.ref('deposits/' + id).remove();
+    }
+
+    function openEditDeposit(id) {
+        const d = deposits.find(x => x.id === id);
+        const m = members.find(x => x.id === d.memberId) || {name: 'Unknown'};
+        const monthOpts = monthList.map(mon => `<option value="${mon}" ${d.month===mon?'selected':''}>${mon}</option>`).join('');
+
+        const html = `
+            <label>Member</label><input type="text" value="${m.name}" disabled style="background:#e5e7eb;">
+            <label>Month</label><select id="edit-d-month">${monthOpts}</select>
+            <label>Amount</label><input type="number" id="edit-d-amount" value="${d.amount}">
+        `;
+        document.getElementById('modal-title').innerText = "Edit Deposit";
+        document.getElementById('modal-body').innerHTML = html;
+        document.getElementById('btn-save-modal').onclick = function() {
+            db.ref('deposits/' + id).update({
+                month: document.getElementById('edit-d-month').value,
+                amount: parseFloat(document.getElementById('edit-d-amount').value)
+            });
+            closeModal();
+        };
+        document.getElementById('editModal').classList.add('open');
+    }
+
+    // --- LOANS ---
+    function updateLoan() {
+        const mid = document.getElementById('loan-member').value;
+        const type = document.getElementById('loan-type').value;
+        const amt = parseFloat(document.getElementById('loan-amount').value);
+        if(!mid || !amt) return alert("Missing Info");
+
+        // Find existing loan or default to 0
+        let l = loans.find(x => x.memberId === mid);
+        let currentBal = l ? l.principal : 0;
+        
+        if(type==='take') currentBal += amt;
+        else {
+            if(amt > currentBal) return alert("Amount > Balance");
+            currentBal -= amt;
+        }
+
+        // We use memberId as the key for loans to keep 1-to-1 relationship
+        db.ref('loans/' + mid).update({ principal: currentBal, memberId: mid });
+    }
+
+    // -----------------------------------------------------------------
+    //  6. RENDER UI
+    // -----------------------------------------------------------------
+
+    function shareGroupReport() {
+        const totalFund = deposits.reduce((a,b)=>a+b.amount,0);
+        const totalLoans = loans.reduce((a,b)=>a+b.principal,0);
+        
+        let msg = `*📢 TOUR FUND REPORT* %0a------------------%0a`;
+        msg += `💰 Total Savings: ₹${totalFund} %0a`;
+        msg += `📉 Active Loans: ₹${totalLoans} %0a`;
+        msg += `------------------%0a*Details:*%0a`;
+
+        members.forEach((m, i) => {
+            const saved = deposits.filter(d => d.memberId === m.id).reduce((a,b)=>a+b.amount,0);
+            const l = loans.find(x => x.memberId === m.id);
+            const bal = l ? l.principal : 0;
+            const status = bal > 0 ? `⚠️ Loan: ${bal}` : `✅ OK`;
+            msg += `${i+1}. ${m.name}: Paid ₹${saved} | ${status} %0a`;
+        });
+        window.open(`https://wa.me/?text=${msg}`, '_blank');
+    }
+
+    function renderReport() {
+        const thead = document.getElementById('matrix-head');
+        thead.innerHTML = `<th>Name</th>` + monthList.map(m => `<th>${m}</th>`).join('') + `<th>Total</th>`;
+        
+        const tbody = document.getElementById('matrix-body');
+        tbody.innerHTML = members.map(m => {
+            let row = `<td>${m.name}</td>`;
+            let total = 0;
+            monthList.forEach(mon => {
+                const sum = deposits.filter(d => d.memberId === m.id && d.month === mon).reduce((a,b)=>a+b.amount,0);
+                total += sum;
+                row += sum > 0 ? `<td style="color:green; background:#ecfdf5">✅ ${sum}</td>` : `<td style="color:#ddd">-</td>`;
+            });
+            return `<tr>${row}<td><b>${total}</b></td></tr>`;
+        }).join('');
+        
+        // Footer
+        let foot = `<td>TOTAL</td>`;
+        let grand = 0;
+        monthList.forEach(mon => {
+            const sum = deposits.filter(d => d.month === mon).reduce((a,b)=>a+b.amount,0);
+            foot += `<td>${sum}</td>`;
+            grand += sum;
+        });
+        document.getElementById('matrix-foot').innerHTML = `<tr>${foot}<td>₹${grand}</td></tr>`;
+    }
+
+    function renderAll() {
+        // Dashboard Stats
+        document.getElementById('dash-fund').innerText = "₹" + deposits.reduce((a,b)=>a+b.amount,0);
+        document.getElementById('dash-loans').innerText = "₹" + loans.reduce((a,b)=>a+b.principal,0);
+
+        // Dropdowns
+        const opts = '<option value="">Select Member</option>' + members.map(m=>`<option value="${m.id}">${m.name}</option>`).join('');
+        document.getElementById('dep-member').innerHTML = opts;
+        document.getElementById('loan-member').innerHTML = opts;
+
+        // Interest Table
+        document.getElementById('table-interest').innerHTML = loans.filter(l=>l.principal>0).map(l => {
+            const m = members.find(x=>x.id===l.memberId);
+            if(!m) return '';
+            const interest = (l.principal * 0.10).toFixed(0);
+            return `<tr><td>${m.name}</td><td>₹${l.principal}</td><td style="color:#6366f1; font-weight:bold;">₹${interest}</td>
+            <td><a href="https://wa.me/${m.phone}?text=Interest Due: ₹${interest}" target="_blank" class="btn-primary" style="padding:5px; text-decoration:none;">Notify</a></td></tr>`;
+        }).join('') || '<tr><td colspan="4" style="text-align:center">No active loans</td></tr>';
+
+        // Members Table
+        document.getElementById('table-members').innerHTML = members.map(m => `
+            <tr>
+                <td><b>${m.name}</b></td><td>${m.phone}</td><td style="font-size:0.8rem">${m.address||'-'}</td>
+                <td><div class="action-box">
+                    <button class="btn-icon btn-edit" onclick="openEditMember('${m.id}')"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="btn-icon btn-del" onclick="deleteMember('${m.id}')"><i class="fas fa-trash"></i></button>
+                </div></td>
+            </tr>
+        `).join('');
+
+        // Deposits Table (Sort by Timestamp Newest First, Limit 20)
+        // Note: We use the timestamp we saved, or fallback to array order if missing
+        const sortedDeposits = deposits.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 20);
+        
+        document.getElementById('table-deposits').innerHTML = sortedDeposits.map(d => {
+            const m = members.find(x=>x.id===d.memberId) || {name:'?'};
+            return `<tr>
+                <td>${m.name}</td><td><span class="badge-month">${d.month}</span></td><td class="amount-text">₹${d.amount}</td>
+                <td><div class="action-box">
+                    <button class="btn-icon btn-edit" onclick="openEditDeposit('${d.id}')"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="btn-icon btn-del" onclick="deleteDeposit('${d.id}')"><i class="fas fa-trash"></i></button>
+                </div></td>
+            </tr>`;
+        }).join('');
+
+        // Loans Table
+        document.getElementById('table-loans').innerHTML = loans.map(l => {
+            const m = members.find(x=>x.id===l.memberId);
+            if(!m) return '';
+            return `<tr><td>${m.name}</td><td style="color:${l.principal>0?'red':'green'}">₹${l.principal}</td><td><a href="https://wa.me/${m.phone}" style="color:green"><i class="fab fa-whatsapp"></i></a></td></tr>`;
+        }).join('');
+    }
+</script>
+</body>
+</html>
