@@ -352,7 +352,7 @@
                 <div class="table-container">
                     <div class="table-wrapper">
                         <table>
-                            <thead><tr><th>Member Name</th><th>Principal Bal</th><th>Interest Due</th><th>Action</th></tr></thead>
+                            <thead><tr><th>S.No</th><th>Member Name</th><th>Principal Bal</th><th>Interest Due</th><th>Action</th></tr></thead>
                             <tbody id="dash-active-loans-body"></tbody>
                         </table>
                     </div>
@@ -381,9 +381,9 @@
                 </div>
                 <div id="report-loans" style="display:none;">
                     <h3 style="color:var(--danger); margin-bottom:15px; border-bottom:2px solid #fee2e2; padding-bottom:10px;"><i class="fas fa-arrow-up"></i> Loans Taken & Interest Charged (Debt Created)</h3>
-                    <div class="table-container" style="margin-bottom:40px;"><div class="table-wrapper"><table><thead><tr><th style="min-width:120px; position:sticky; left:0; background:rgba(248, 250, 252, 0.8); z-index:10;">Name</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th><th>Jul</th><th>Aug</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th><th style="color:#ef4444;">Tot. Principal</th><th style="color:#8b5cf6;">Tot. Int Added</th></tr></thead><tbody id="loan-taken-body"></tbody></table></div></div>
+                    <div class="table-container" style="margin-bottom:40px;"><div class="table-wrapper"><table><thead><tr><th style="width:50px;">S.No</th><th style="min-width:120px; position:sticky; left:50px; background:rgba(248, 250, 252, 0.8); z-index:10;">Name</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th><th>Jul</th><th>Aug</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th><th style="color:#ef4444;">Tot. Principal</th><th style="color:#8b5cf6;">Tot. Int Added</th></tr></thead><tbody id="loan-taken-body"></tbody></table></div></div>
                     <h3 style="color:var(--secondary); margin-bottom:15px; border-bottom:2px solid #dcfce7; padding-bottom:10px;"><i class="fas fa-arrow-down"></i> Repayments & Interest Paid (Debt Cleared)</h3>
-                    <div class="table-container"><div class="table-wrapper"><table><thead><tr><th style="min-width:120px; position:sticky; left:0; background:rgba(248, 250, 252, 0.8); z-index:10;">Name</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th><th>Jul</th><th>Aug</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th><th style="color:#10b981;">Tot. Repaid</th><th style="color:#f59e0b;">Tot. Int Paid</th></tr></thead><tbody id="loan-repaid-body"></tbody></table></div></div>
+                    <div class="table-container"><div class="table-wrapper"><table><thead><tr><th style="width:50px;">S.No</th><th style="min-width:120px; position:sticky; left:50px; background:rgba(248, 250, 252, 0.8); z-index:10;">Name</th><th>Jan</th><th>Feb</th><th>Mar</th><th>Apr</th><th>May</th><th>Jun</th><th>Jul</th><th>Aug</th><th>Sep</th><th>Oct</th><th>Nov</th><th>Dec</th><th style="color:#10b981;">Tot. Repaid</th><th style="color:#f59e0b;">Tot. Int Paid</th></tr></thead><tbody id="loan-repaid-body"></tbody></table></div></div>
                 </div>
             </div>
         </div>
@@ -403,7 +403,7 @@
                 <h2>Member Directory</h2>
                 <div class="table-container">
                     <div class="table-wrapper">
-                        <table><thead><tr><th>Name</th><th>Phone</th><th>Address</th><th>Action</th></tr></thead><tbody id="table-members"></tbody></table>
+                        <table><thead><tr><th>S.No</th><th>Name</th><th>Phone</th><th>Address</th><th>Action</th></tr></thead><tbody id="table-members"></tbody></table>
                     </div>
                 </div>
             </div>
@@ -564,7 +564,7 @@
             if(tbody) {
                 const rows = tbody.getElementsByTagName('tr');
                 for (let i = 0; i < rows.length; i++) {
-                    const nameCell = rows[i].getElementsByTagName('td')[0];
+                    const nameCell = rows[i].getElementsByTagName('td')[1];
                     if (nameCell) {
                         const txtValue = nameCell.textContent || nameCell.innerText;
                         rows[i].style.display = txtValue.toLowerCase().indexOf(query) > -1 ? "" : "none";
@@ -693,8 +693,8 @@
         if(depSel.options.length !== members.length + 1) depSel.innerHTML = opts;
         if(loanSel.options.length !== members.length + 1) loanSel.innerHTML = opts;
 
-        document.getElementById('table-members').innerHTML = members.map(m => `
-            <tr><td style="font-weight:600">${m.name}</td><td>${m.phone}</td><td>${m.address||'-'}</td>
+        document.getElementById('table-members').innerHTML = members.map((m, index) => `
+            <tr><td style="text-align:center; font-weight:600; color:#64748b;">${index + 1}</td><td style="font-weight:600">${m.name}</td><td>${m.phone}</td><td>${m.address||'-'}</td>
             <td><button onclick="prepareEditMember('${m.id}')" class="btn-icon-only" style="background:#dbeafe; color:#1e40af;"><i class="fas fa-pencil"></i></button>
             <button onclick="deleteMember('${m.id}')" class="btn-icon-only" style="background:#fee2e2; color:#991b1b;"><i class="fas fa-trash"></i></button></td></tr>`).join('');
 
@@ -707,14 +707,17 @@
             <button onclick="deleteDeposit('${d.id}')" class="btn-icon-only" style="background:#fee2e2; color:#991b1b;"><i class="fas fa-trash"></i></button></td></tr>`;
         }).join('');
 
-        const debtHtml = loans.filter(l => (l.principal > 0 || l.interestDue > 0)).map(l => {
-            const m = members.find(x=>x.id===l.memberId);
+        const activeLoans = loans.filter(l => (l.principal > 0 || l.interestDue > 0));
+        const debtHtml = activeLoans.map((l, index) => {
+            // Find member by loan's id (which is the memberId) or memberId property
+            const m = members.find(x=>x.id===(l.id || l.memberId));
             if(!m) return '';
             const totalPayable = (l.principal || 0) + (l.interestDue || 0);
 
             // Construct WhatsApp Message
+            const memberId = l.id || l.memberId;
             const memberTakes = loanTxns
-                .filter(t => t.memberId === l.memberId && t.type === 'take')
+                .filter(t => t.memberId === memberId && t.type === 'take')
                 .map(t => `${t.month}: ₹${t.amount}`)
                 .join(', ');
 
@@ -729,10 +732,10 @@
             msg += `----------------\n`;
             msg += `Thank you!!`;
             
-            return `<tr><td style="font-weight:600">${m.name}</td><td><span class="badge bg-red-light">₹${l.principal}</span></td><td><span class="badge bg-purple-light">₹${l.interestDue}</span></td>
+            return `<tr><td style="text-align:center; font-weight:600; color:#64748b;">${index + 1}</td><td style="font-weight:600">${m.name}</td><td><span class="badge bg-red-light">₹${l.principal}</span></td><td><span class="badge bg-purple-light">₹${l.interestDue}</span></td>
             <td><a href="https://wa.me/${m.phone}?text=${encodeURIComponent(msg)}" target="_blank" style="color:var(--secondary); text-decoration:none; font-weight:700;"><i class="fab fa-whatsapp"></i> Notify</a></td></tr>`;
         }).join('');
-        document.getElementById('dash-active-loans-body').innerHTML = debtHtml || '<tr><td colspan="4" style="text-align:center;">No active debts!</td></tr>';
+        document.getElementById('dash-active-loans-body').innerHTML = debtHtml || '<tr><td colspan="5" style="text-align:center;">No active debts!</td></tr>';
         
         const sortedTxns = loanTxns.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
         document.getElementById('table-loan-history').innerHTML = sortedTxns.map(t => {
@@ -755,9 +758,9 @@
 
     function renderReport() { if (currentReportTab === 'savings') renderSavingsReport(); else renderSplitLoanReports(); }
     function renderSavingsReport() {
-        document.getElementById('matrix-head').innerHTML = `<th>Name</th>` + monthList.map(m => `<th>${m}</th>`).join('') + `<th>Total</th>`;
-        document.getElementById('matrix-body').innerHTML = members.map(m => {
-            let row = `<td style="font-weight:600; color:var(--primary); position:sticky; left:0; background:rgba(255,255,255,0.9); z-index:10; border-right:2px solid #f1f5f9;">${m.name}</td>`, total = 0;
+        document.getElementById('matrix-head').innerHTML = `<th>S.No</th><th>Name</th>` + monthList.map(m => `<th>${m}</th>`).join('') + `<th>Total</th>`;
+        document.getElementById('matrix-body').innerHTML = members.map((m, index) => {
+            let row = `<td style="text-align:center; font-weight:600; color:#64748b; width:50px;">${index + 1}</td><td style="font-weight:600; color:var(--primary); position:sticky; left:50px; background:rgba(255,255,255,0.9); z-index:10; border-right:2px solid #f1f5f9;">${m.name}</td>`, total = 0;
             monthList.forEach(mon => {
                 const sum = deposits.filter(d => d.memberId === m.id && d.month === mon).reduce((a,b)=>a+b.amount,0);
                 total += sum;
@@ -767,22 +770,45 @@
         }).join('');
     }
     function renderSplitLoanReports() {
-        document.getElementById('loan-taken-body').innerHTML = members.map(m => {
-            let row = `<td style="font-weight:600; color:var(--dark); position:sticky; left:0; background:rgba(255,255,255,0.9); z-index:10; border-right:2px solid #f1f5f9;">${m.name}</td>`, rowTaken = 0, rowInt = 0;
+        document.getElementById('loan-taken-body').innerHTML = members.map((m, index) => {
+            let row = `<td style="text-align:center; font-weight:600; color:#64748b; width:50px;">${index + 1}</td><td style="font-weight:600; color:var(--dark); position:sticky; left:50px; background:rgba(255,255,255,0.9); z-index:10; border-right:2px solid #f1f5f9;">${m.name}</td>`;
+            // Fetch loan balances from backend (source of truth)
+            const loanData = loans.find(l => (l.id === m.id || l.memberId === m.id));
+            const backendPrincipal = loanData ? (loanData.principal || 0) : 0;
+            const backendInterestDue = loanData ? (loanData.interestDue || 0) : 0;
+            // Show monthly transaction breakdown for historical view
             monthList.forEach(mon => {
-                const txns = loanTxns.filter(t => t.memberId === m.id && (t.month === mon || new Date(t.timestamp).toLocaleString('default',{month:'short'}) === mon));
-                let taken = 0, int = 0; txns.forEach(t => { if(t.type==='take') taken+=t.amount; if(t.type==='add_interest') int+=t.amount; });
-                rowTaken += taken; rowInt += int;
+                // Use t.month (user-selected month) as primary, fallback to timestamp only if month is missing
+                const txns = loanTxns.filter(t => {
+                    if(t.memberId !== m.id) return false;
+                    // Prioritize t.month field (user-selected month)
+                    if(t.month) return t.month === mon;
+                    // Fallback to timestamp only if t.month is missing
+                    return new Date(t.timestamp).toLocaleString('default',{month:'short'}) === mon;
+                });
+                let taken = 0, int = 0; 
+                txns.forEach(t => { 
+                    if(t.type==='take') taken += (t.amount || 0);
+                    if(t.type==='add_interest') int += (t.amount || 0);
+                });
                 let cell = taken > 0 ? `<span class="ledger-val val-take">-${taken}</span>` : '';
                 if(int > 0) cell += `<span class="ledger-val val-add-int"> ${int}</span>`;
                 row += `<td>${cell || '-'}</td>`;
             });
-            return `<tr>${row}<td style="font-weight:bold; color:#ef4444;">₹${rowTaken}</td><td style="font-weight:bold; color:#8b5cf6;">₹${rowInt}</td></tr>`;
+            // Show backend loan balances for totals (valid amounts from backend)
+            return `<tr>${row}<td style="font-weight:bold; color:#ef4444;">₹${backendPrincipal}</td><td style="font-weight:bold; color:#8b5cf6;">₹${backendInterestDue}</td></tr>`;
         }).join('');
-        document.getElementById('loan-repaid-body').innerHTML = members.map(m => {
-            let row = `<td style="font-weight:600; color:var(--dark); position:sticky; left:0; background:rgba(255,255,255,0.9); z-index:10; border-right:2px solid #f1f5f9;">${m.name}</td>`, rowRep = 0, rowInt = 0;
+        document.getElementById('loan-repaid-body').innerHTML = members.map((m, index) => {
+            let row = `<td style="text-align:center; font-weight:600; color:#64748b; width:50px;">${index + 1}</td><td style="font-weight:600; color:var(--dark); position:sticky; left:50px; background:rgba(255,255,255,0.9); z-index:10; border-right:2px solid #f1f5f9;">${m.name}</td>`, rowRep = 0, rowInt = 0;
             monthList.forEach(mon => {
-                const txns = loanTxns.filter(t => t.memberId === m.id && (t.month === mon || new Date(t.timestamp).toLocaleString('default',{month:'short'}) === mon));
+                // Use t.month (user-selected month) as primary, fallback to timestamp only if month is missing
+                const txns = loanTxns.filter(t => {
+                    if(t.memberId !== m.id) return false;
+                    // Prioritize t.month field (user-selected month)
+                    if(t.month) return t.month === mon;
+                    // Fallback to timestamp only if t.month is missing
+                    return new Date(t.timestamp).toLocaleString('default',{month:'short'}) === mon;
+                });
                 let rep = 0, int = 0; txns.forEach(t => { if(t.type==='repay_principal') rep+=t.amount; if(t.type==='pay_interest') int+=t.amount; });
                 rowRep += rep; rowInt += int;
                 let cell = rep > 0 ? `<span class="ledger-val val-repay">+${rep}</span>` : '';
@@ -832,7 +858,8 @@
     function deleteLoanTxn(dataStr) {
         const t = JSON.parse(decodeURIComponent(dataStr));
         askConfirm(`Delete ${t.type} of ₹${t.amount}? This will reverse the balance.`, () => {
-            const l = loans.find(x => x.memberId === t.memberId);
+            // Find loan by memberId (loan key is the memberId, so check both id and memberId)
+            const l = loans.find(x => (x.id === t.memberId || x.memberId === t.memberId));
             let curPrin = l ? (l.principal || 0) : 0;
             let curInt = l ? (l.interestDue || 0) : 0;
             if(t.type === 'take') curPrin -= t.amount; 
@@ -852,15 +879,17 @@
         document.getElementById('loan-member').value = t.memberId;
         document.getElementById('loan-type').value = t.type;
         document.getElementById('loan-month').value = t.month;
-        document.getElementById('loan-amount').value = t.amount;
         document.getElementById('loan-teller').value = t.handledBy;
         document.getElementById('loan-title').innerText = "Edit Transaction";
         document.getElementById('btn-save-loan').innerText = "Update Transaction";
         document.getElementById('btn-save-loan').classList.remove('btn-primary');
         document.getElementById('btn-save-loan').classList.add('btn-success');
         document.getElementById('cancel-loan-edit').style.display='block';
+        // Set amount only if NOT add_interest (let handleLoanTypeChange recalculate for add_interest)
+        if(t.type !== 'add_interest') {
+            document.getElementById('loan-amount').value = t.amount;
+        }
         handleLoanTypeChange();
-        if(t.type === 'add_interest') document.getElementById('loan-amount').value = t.amount;
     }
 
     function cancelLoanEdit() {
@@ -878,7 +907,8 @@
         const mid=document.getElementById('loan-member').value, type=document.getElementById('loan-type').value, mon=document.getElementById('loan-month').value, amt=parseFloat(document.getElementById('loan-amount').value), teller=document.getElementById('loan-teller').value, eid=document.getElementById('loan-edit-id').value;
         if(type!=='add_interest' && !teller) return showAlert("Error","Teller required","error");
         if(!mid||isNaN(amt)||amt<0) return showAlert("Error","Invalid input","error");
-        let l = loans.find(x => x.memberId === mid);
+        // Find loan by memberId (loan key is the memberId, so check both id and memberId)
+        let l = loans.find(x => (x.id === mid || x.memberId === mid));
         let curPrin = l ? (l.principal || 0) : 0;
         let curInt = l ? (l.interestDue || 0) : 0;
 
