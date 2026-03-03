@@ -464,7 +464,13 @@
                     </select>
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                    <input type="number" id="loan-amount" placeholder="Enter Amount">
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <input type="number" id="loan-amount" placeholder="Enter Amount">
+                        <!-- checkbox only shown for calculate-interest mode -->
+                        <label id="interest-edit-label" style="display:none; font-size:0.85rem; cursor:pointer;">
+                            <input type="checkbox" id="loan-amount-editable" onchange="handleLoanTypeChange()" style="margin-right:3px;">Manual
+                        </label>
+                    </div>
                     <select id="loan-teller" style="background:rgba(240, 249, 255, 0.7); border-color:#bae6fd;"><option value="">Handled By?</option></select>
                 </div>
                 <p id="loan-hint" style="font-size:0.85rem; color:var(--primary); background:rgba(79, 70, 229, 0.1); padding:10px; border-radius:8px; display:none; margin-top:-5px; margin-bottom:15px;"></p>
@@ -933,21 +939,53 @@
         else { getRef('loan_transactions').push(txnData); showAlert("Success", "Processed", "success"); resetLoanInput(); }
     }
 
-    function resetLoanInput() { document.getElementById('loan-amount').value = ''; document.getElementById('loan-amount').disabled = false; document.getElementById('loan-hint').style.display = 'none'; handleLoanTypeChange(); }
+    function resetLoanInput() {
+        document.getElementById('loan-amount').value = '';
+        document.getElementById('loan-amount').disabled = false;
+        // reset manual override checkbox
+        const chk = document.getElementById('loan-amount-editable');
+        if (chk) chk.checked = false;
+        document.getElementById('loan-hint').style.display = 'none';
+        handleLoanTypeChange();
+    }
     function handleLoanTypeChange() {
-        const type=document.getElementById('loan-type').value, mid=document.getElementById('loan-member').value, amtInput=document.getElementById('loan-amount'), hint=document.getElementById('loan-hint');
+        const type = document.getElementById('loan-type').value;
+        const mid = document.getElementById('loan-member').value;
+        const amtInput = document.getElementById('loan-amount');
+        const hint = document.getElementById('loan-hint');
+        const editChk = document.getElementById('loan-amount-editable');
+        const editLabel = document.getElementById('interest-edit-label');
         const isEdit = document.getElementById('loan-edit-id').value;
+
+        // hide manual control by default
+        if (editLabel) editLabel.style.display = 'none';
+
         if (type === 'add_interest' && !isEdit) {
-            if(mid) {
+            if (mid) {
                 const l = loans.find(x => x.memberId === mid);
                 const prin = l ? (l.principal || 0) : 0;
-                const rate = CURRENT_META.interestRate || 2; 
-                const calcInt = Math.round(prin * (rate/100)); 
-                amtInput.value = calcInt; amtInput.disabled = true; 
-                hint.style.display = 'block'; hint.innerHTML = `Auto-calculated ${rate}% of Principal.`;
+                const rate = CURRENT_META.interestRate || 2;
+                const calcInt = Math.round(prin * (rate / 100));
+
+                // if user has opted to manually override, keep existing value
+                if (editChk && editChk.checked) {
+                    amtInput.disabled = false;
+                } else {
+                    amtInput.value = calcInt;
+                    amtInput.disabled = true;
+                }
+
+                // show manual toggle checkbox
+                if (editLabel) editLabel.style.display = 'inline-flex';
+
+                hint.style.display = 'block';
+                hint.innerHTML = `Auto-calculated ${rate}% of Principal.` +
+                    (editChk && editChk.checked ? ' You can override the value.' : '');
             }
         } else if (!isEdit) {
-            amtInput.disabled = false; if(amtInput.disabled) amtInput.value=''; hint.style.display = 'none';
+            amtInput.disabled = false;
+            if (amtInput.disabled) amtInput.value = '';
+            hint.style.display = 'none';
         }
     }
 </script>
